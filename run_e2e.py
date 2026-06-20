@@ -21,6 +21,9 @@ import os
 
 # Add the local msal package to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add sub-packages to path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "msal-key-attestation"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "msal-schannel-transport"))
 
 def main():
     print("=" * 60)
@@ -124,10 +127,6 @@ def main():
     print(f"{'─' * 60}")
 
     try:
-        # Import the separate transport package
-        sys.path.insert(0, os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "msal-schannel-transport"))
         from msal_schannel_transport import SchannelSession
 
         token_type = result.get("token_type", "mtls_pop")
