@@ -125,9 +125,87 @@ class SchannelSession:
 
     def _setup(self) -> None:
         """Initialize WinHTTP bindings and create CERT_CONTEXT."""
-        from msal.msi_v2 import _load_win32
-        self._win32 = _load_win32()
+        self._win32 = self._load_winhttp()
         self._cert_ctx = self._certificate.create_cert_context()
+
+    @staticmethod
+    def _load_winhttp() -> dict:
+        """Load minimal WinHTTP bindings (independent of MSAL internals)."""
+        import ctypes
+        from ctypes import wintypes
+
+        winhttp = ctypes.WinDLL("winhttp.dll", use_last_error=True)
+        crypt32 = ctypes.WinDLL("crypt32.dll", use_last_error=True)
+
+        class CERT_CONTEXT(ctypes.Structure):
+            _fields_ = [
+                ("dwCertEncodingType", wintypes.DWORD),
+                ("pbCertEncoded", ctypes.POINTER(ctypes.c_ubyte)),
+                ("cbCertEncoded", wintypes.DWORD),
+                ("pCertInfo", ctypes.c_void_p),
+                ("hCertStore", ctypes.c_void_p),
+            ]
+
+        PCCERT_CONTEXT = ctypes.POINTER(CERT_CONTEXT)
+
+        winhttp.WinHttpOpen.argtypes = [
+            ctypes.c_wchar_p, wintypes.DWORD, ctypes.c_wchar_p,
+            ctypes.c_wchar_p, wintypes.DWORD]
+        winhttp.WinHttpOpen.restype = ctypes.c_void_p
+
+        winhttp.WinHttpConnect.argtypes = [
+            ctypes.c_void_p, ctypes.c_wchar_p, wintypes.WORD, wintypes.DWORD]
+        winhttp.WinHttpConnect.restype = ctypes.c_void_p
+
+        winhttp.WinHttpOpenRequest.argtypes = [
+            ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_wchar_p,
+            ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_void_p, wintypes.DWORD]
+        winhttp.WinHttpOpenRequest.restype = ctypes.c_void_p
+
+        winhttp.WinHttpSetOption.argtypes = [
+            ctypes.c_void_p, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+        winhttp.WinHttpSetOption.restype = wintypes.BOOL
+
+        winhttp.WinHttpSendRequest.argtypes = [
+            ctypes.c_void_p, ctypes.c_wchar_p, wintypes.DWORD, ctypes.c_void_p,
+            wintypes.DWORD, wintypes.DWORD, ctypes.c_size_t]
+        winhttp.WinHttpSendRequest.restype = wintypes.BOOL
+
+        winhttp.WinHttpReceiveResponse.argtypes = [
+            ctypes.c_void_p, ctypes.c_void_p]
+        winhttp.WinHttpReceiveResponse.restype = wintypes.BOOL
+
+        winhttp.WinHttpQueryHeaders.argtypes = [
+            ctypes.c_void_p, wintypes.DWORD, ctypes.c_wchar_p, ctypes.c_void_p,
+            ctypes.POINTER(wintypes.DWORD), ctypes.POINTER(wintypes.DWORD)]
+        winhttp.WinHttpQueryHeaders.restype = wintypes.BOOL
+
+        winhttp.WinHttpQueryDataAvailable.argtypes = [
+            ctypes.c_void_p, ctypes.POINTER(wintypes.DWORD)]
+        winhttp.WinHttpQueryDataAvailable.restype = wintypes.BOOL
+
+        winhttp.WinHttpReadData.argtypes = [
+            ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD)]
+        winhttp.WinHttpReadData.restype = wintypes.BOOL
+
+        winhttp.WinHttpCloseHandle.argtypes = [ctypes.c_void_p]
+        winhttp.WinHttpCloseHandle.restype = wintypes.BOOL
+
+        crypt32.CertFreeCertificateContext.argtypes = [PCCERT_CONTEXT]
+        crypt32.CertFreeCertificateContext.restype = wintypes.BOOL
+
+        return {
+            "ctypes": ctypes, "wintypes": wintypes,
+            "winhttp": winhttp, "crypt32": crypt32,
+            "CERT_CONTEXT": CERT_CONTEXT,
+            "WINHTTP_ACCESS_TYPE_DEFAULT_PROXY": 0,
+            "WINHTTP_FLAG_SECURE": 0x00800000,
+            "WINHTTP_OPTION_CLIENT_CERT_CONTEXT": 47,
+            "WINHTTP_OPTION_ENABLE_HTTP2_PLUS_CLIENT_CERT": 161,
+            "WINHTTP_QUERY_STATUS_CODE": 19,
+            "WINHTTP_QUERY_FLAG_NUMBER": 0x20000000,
+        }
 
     def get(
         self,
