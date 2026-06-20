@@ -1431,11 +1431,8 @@ def obtain_token(
         scope = _resource_to_scope(resource)
 
         # 7) POST token via WinHTTP/SChannel mTLS
-        print(f"  [DEBUG] about to call _acquire_token_mtls_schannel, "
-              f"token_endpoint={token_endpoint}, client_id={canonical_client_id}")
         token_json = _acquire_token_mtls_schannel(
             win32, token_endpoint, cert_ctx, canonical_client_id, scope)
-        print(f"  [DEBUG] token_json keys: {list(token_json.keys())}")
 
         if token_json.get("access_token") and token_json.get("expires_in"):
             cert_pem = _der_to_pem(cert_der)
@@ -1458,15 +1455,11 @@ def obtain_token(
 
             # binding_certificate is only present for mTLS PoP tokens
             # on Windows. For non-mTLS or non-Windows flows it is None.
-            print(f"  [DEBUG] binding_cert gate: platform={sys.platform} "
-                  f"token_type={token_type!r} key={key} prov={prov} "
-                  f"key_name={key_name}")
             if (sys.platform == "win32"
                     and token_type.lower() in ("mtls_pop", "pop")):
                 from .windows_certificate import WindowsCertificate
 
                 # Create WindowsCertificate — transfers key/prov ownership
-                print(f"  [DEBUG] calling WindowsCertificate._from_handles")
                 binding_cert = WindowsCertificate._from_handles(
                     win32, cert_der, key, prov, key_name)
                 # Ownership transferred — don't free in finally
@@ -1476,14 +1469,11 @@ def obtain_token(
                 result["binding_certificate"] = binding_cert
                 result["binding_certificate_metadata"] = (
                     binding_cert.to_metadata_dict())
-                print(f"  [DEBUG] binding_certificate SET: {binding_cert}")
             else:
                 result["binding_certificate"] = None
                 result["binding_certificate_metadata"] = None
-                print(f"  [DEBUG] binding_certificate set to None (gate failed)")
 
             return result
-        print(f"  [DEBUG] returning raw token_json (no access_token/expires_in)")
         return token_json
 
     except Exception:
