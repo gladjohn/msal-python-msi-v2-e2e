@@ -41,15 +41,15 @@ def main():
     from msal.windows_certificate import WindowsCertificate
 
     # Config
-    resource = os.environ.get("MSI_V2_RESOURCE", "https://vault.azure.net")
-    vault_url = os.environ.get(
-        "MSI_V2_VAULT_URL", "https://msidlabvault.vault.azure.net")
-    secret_name = os.environ.get("MSI_V2_SECRET_NAME", "test-secret")
+    resource = os.environ.get("MSI_V2_RESOURCE", "https://graph.microsoft.com")
+    # Full downstream URL to call over mTLS
+    downstream_url = os.environ.get(
+        "MSI_V2_DOWNSTREAM_URL",
+        "https://mtlstb.graph.microsoft.com/v1.0/applications")
 
     print(f"\nConfig:")
-    print(f"  Resource:    {resource}")
-    print(f"  Vault URL:   {vault_url}")
-    print(f"  Secret:      {secret_name}")
+    print(f"  Resource:       {resource}")
+    print(f"  Downstream URL: {downstream_url}")
 
     # Step 1: Acquire token
     print(f"\n{'─' * 60}")
@@ -125,7 +125,7 @@ def main():
 
     # Step 3: Downstream mTLS call to AKV
     print(f"\n{'─' * 60}")
-    print("Step 3: Calling Azure Key Vault over mTLS")
+    print("Step 3: Calling downstream API over mTLS")
     print(f"{'─' * 60}")
 
     try:
@@ -134,13 +134,12 @@ def main():
         token_type = result.get("token_type", "mtls_pop")
         auth_header = f"{token_type} {result['access_token']}"
 
-        url = f"{vault_url}/secrets/{secret_name}?api-version=7.5"
-        print(f"  URL: {url}")
+        print(f"  URL: {downstream_url}")
         print(f"  Authorization: {token_type} <token>")
 
         with SchannelSession(client_certificate=binding_cert) as session:
             response = session.get(
-                url,
+                downstream_url,
                 headers={"Authorization": auth_header},
             )
 
@@ -148,18 +147,24 @@ def main():
 
         if response.status_code == 200:
             body = response.json()
-            print(f"  ✓ Secret retrieved!")
-            print(f"    id: {body.get('id')}")
-            # Don't print the actual secret value
-            print(f"    has value: {'value' in body}")
+            print(f"  ✓ Success!")
+            # Print first few keys of response
+            keys = list(body.keys())[:5]
+            for k in keys:
+                v = body[k]
+                if isinstance(v, str) and len(v) > 80:
+                    v = v[:80] + "..."
+                elif isinstance(v, list):
+                    v = f"[{len(v)} items]"
+                print(f"    {k}: {v}")
         elif response.status_code == 403:
-            print(f"  ⚠ 403 Forbidden — MSI may lack AKV access policy")
+            print(f"  ⚠ 403 Forbidden — identity may lack permissions")
             print(f"    {response.text[:300]}")
         elif response.status_code == 401:
             print(f"  ✗ 401 Unauthorized — mTLS binding failed?")
             print(f"    {response.text[:300]}")
         else:
-            print(f"  ? Unexpected status")
+            print(f"  ? HTTP {response.status_code}")
             print(f"    {response.text[:300]}")
 
     except Exception as e:
