@@ -82,6 +82,7 @@ _KEY_NAME_ENVVAR = "MSAL_MSI_V2_KEY_NAME"
 _NTE_BAD_KEYSET = 0x80090016
 _NTE_NO_KEY = 0x8009000D
 _NTE_NOT_FOUND = 0x80090011
+_NTE_KEY_DOES_NOT_EXIST = 0x8009003A  # KeyGuard/VBS provider uses this
 _NTE_EXISTS = 0x8009000F
 
 # Lazy-loaded Win32 API cache
@@ -645,7 +646,8 @@ def _status_u32(status: int) -> int:
 
 
 def _is_key_not_found(status: int) -> bool:
-    return _status_u32(status) in (_NTE_BAD_KEYSET, _NTE_NO_KEY, _NTE_NOT_FOUND)
+    return _status_u32(status) in (
+        _NTE_BAD_KEYSET, _NTE_NO_KEY, _NTE_NOT_FOUND, _NTE_KEY_DOES_NOT_EXIST)
 
 
 # ---------------------------------------------------------------------------
