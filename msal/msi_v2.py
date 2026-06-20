@@ -1455,6 +1455,10 @@ def obtain_token(
 
             # binding_certificate is only present for mTLS PoP tokens
             # on Windows. For non-mTLS or non-Windows flows it is None.
+            logger.info(
+                "[msi_v2] binding_cert gate: platform=%s token_type=%r "
+                "key=%s prov=%s key_name=%s",
+                sys.platform, token_type, key, prov, key_name)
             if (sys.platform == "win32"
                     and token_type.lower() in ("mtls_pop", "pop")):
                 from .windows_certificate import WindowsCertificate

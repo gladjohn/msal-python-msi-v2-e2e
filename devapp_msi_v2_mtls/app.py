@@ -43,14 +43,16 @@ def main():
         return 1
 
     # ── Import MSAL public API only ──────────────────────────
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
     import msal
     import requests
 
     # ── Configuration ────────────────────────────────────────
-    resource = os.environ.get("RESOURCE", "https://graph.microsoft.com")
+    resource = os.environ.get("RESOURCE", "https://vault.azure.net")
     downstream_url = os.environ.get(
         "DOWNSTREAM_URL",
-        "https://mtlstb.graph.microsoft.com/v1.0/applications")
+        "https://tokenbinding.vault.azure.net/secrets/boundsecret/?api-version=2015-06-01")
     uami_client_id = os.environ.get("UAMI_CLIENT_ID", "")
 
     print(f"\n  Resource:       {resource}")
@@ -167,7 +169,10 @@ def main():
         with SchannelSession(client_certificate=binding_cert) as session:
             response = session.get(
                 downstream_url,
-                headers={"Authorization": auth_header},
+                headers={
+                    "Authorization": auth_header,
+                    "x-ms-tokenboundauth": "true",
+                },
             )
 
         print(f"\n  Response: HTTP {response.status_code}")
