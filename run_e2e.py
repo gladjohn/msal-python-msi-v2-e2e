@@ -62,11 +62,13 @@ def main():
     # Try attestation
     attestation_provider = None
     try:
-        from msal_key_attestation import get_attestation_token
-        attestation_provider = get_attestation_token
+        from msal_key_attestation import create_attestation_provider
+        attestation_provider = create_attestation_provider()
         print("  ✓ msal-key-attestation loaded (attested flow)")
     except ImportError:
         print("  ⚠ msal-key-attestation not found (non-attested flow)")
+    except Exception as e:
+        print(f"  ⚠ msal-key-attestation failed to init: {e}")
 
     try:
         result = obtain_token(
