@@ -31,6 +31,17 @@ import os
 import sys
 import base64
 
+# Ensure local packages (msal/, msal-key-attestation/, msal-schannel-transport/)
+# take precedence over system-installed versions.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+for _subpkg in [
+    _REPO_ROOT,
+    os.path.join(_REPO_ROOT, "msal-key-attestation"),
+    os.path.join(_REPO_ROOT, "msal-schannel-transport"),
+]:
+    if _subpkg not in sys.path:
+        sys.path.insert(0, _subpkg)
+
 
 def main():
     print("=" * 60)
