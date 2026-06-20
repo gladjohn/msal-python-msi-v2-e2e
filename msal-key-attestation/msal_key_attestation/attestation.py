@@ -110,11 +110,17 @@ def _load_lib():
     try:
         if explicit:
             return ctypes.CDLL(explicit)
+        # Try bundled DLL next to this module first
+        bundled = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "AttestationClientLib.dll")
+        if os.path.isfile(bundled):
+            return ctypes.CDLL(bundled)
         return ctypes.CDLL("AttestationClientLib.dll")
     except OSError as exc:
         raise RuntimeError(
             "[msal_key_attestation] Unable to load AttestationClientLib.dll. "
-            "Place it next to the app/exe or set ATTESTATION_CLIENTLIB_PATH."
+            "Install msal-key-attestation package or set ATTESTATION_CLIENTLIB_PATH."
         ) from exc
 
 
